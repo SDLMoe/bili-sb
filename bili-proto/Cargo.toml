@@ -1,0 +1,18 @@
+[package]
+name = "bili-proto"
+version = "0.0.0"
+edition = "2021"
+homepage = "https://github.com/SDLMoe/bili-sb"
+
+build = "build.rs"
+
+[dependencies]
+anyhow = "1.0.75"
+prost = "0.11.9"
+prost-types = "0.11.9"
+tonic = { version = "0.9.2", features = ["tls-webpki-roots", "gzip"] }
+
+[build-dependencies]
+anyhow = "1.0.75"
+glob = "0.3.1"
+tonic-build = "0.9.2"

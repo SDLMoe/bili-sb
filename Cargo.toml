@@ -1,0 +1,7 @@
+[workspace]
+members = [
+  "bili-proto",
+  "bili-sb",
+]
+
+resolver = "2"
