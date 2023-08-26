@@ -20,11 +20,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Setup Toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
-          toolchain: stable
-          override: true
           components: rustfmt, clippy
       - name: Setup protoc
         uses: taiki-e/install-action@v2
