@@ -9,11 +9,10 @@ pub mod client;
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-  /// Name of the person to greet
-  #[arg(short = 'i', long = "addr")]
   // `[::]` binds to IPv6 and IPv4 at the same time
   // See: https://github.com/tokio-rs/axum/discussions/834
   /// Address to bind
+  #[arg(short = 'i', long = "addr")]
   #[arg(default_value = "[::]:8402")]
   addr: String,
 }
