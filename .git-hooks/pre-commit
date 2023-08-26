@@ -1,0 +1,42 @@
+#!/bin/bash
+
+echo "[pre-commit check]"
+
+if ! [ -x "$(command -v cargo)" ]; then
+  echo -e 'Rust toolchains are not installed!'
+  echo
+  echo 'If you are running on Unix-like platform, you can follow the on-screen instructions:'
+  echo
+  echo "  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
+  echo
+  echo 'If you are running on Windows, or you want to install'
+  echo 'Rust toolchains via package managers, you can see:'
+  echo
+  echo '- [Install Rust - rust-lang.org](https://www.rust-lang.org/tools/install)'
+  echo '- [Other Rust Installation Methods](https://forge.rust-lang.org/infra/other-installation-methods.html)'
+  exit 1
+fi
+
+rust() {
+  CHANGED_FILES="$(git --no-pager diff --name-status --no-color --cached | awk '$1 != "D" && $NF ~ /\.rs$/ { print $NF }')"
+
+  if [ -z "$CHANGED_FILES" ]; then
+    echo "No Rust staged files."
+    return 0
+  fi
+
+  if ! cargo clippy -- -D warnings; then
+    echo -e "cargo clippy failed..."
+    return 1
+  fi
+
+  if ! cargo fmt --all -- --check; then
+    echo -e "cargo fmt failed..."
+    echo -e "You can manually run 'cargo fmt' for auto format fix"
+    return 1
+  fi
+}
+
+if ! rust; then
+  exit 1
+fi

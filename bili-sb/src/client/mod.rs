@@ -31,13 +31,13 @@ pub const BILI_GRPC_FAILOVER_URL: &str = "https://app.bilibili.com";
 
 pub fn bili_interceptor(request: Request<()>) -> Result<Request<()>, Status> {
   let (mut meta, exts, msg) = request.into_parts();
-  const METADATA: Lazy<&'static str> = Lazy::new(|| {
+  static METADATA: Lazy<&'static str> = Lazy::new(|| {
     let metadata = bilibili::metadata::Metadata::default().encode_to_vec();
     let encoded: &'static [u8] = MetadataValue::from_bytes(&metadata)
       .as_encoded_bytes()
       .to_vec()
       .leak();
-    unsafe { std::str::from_utf8_unchecked(&encoded) }
+    unsafe { std::str::from_utf8_unchecked(encoded) }
   });
   meta.insert_bin("x-bili-metadata-bin", MetadataValue::from_static(*METADATA));
   Ok(Request::from_parts(meta, exts, msg))

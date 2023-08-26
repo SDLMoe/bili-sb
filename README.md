@@ -12,3 +12,15 @@ Requirements:
 - Protobuf Compiler, i.e. `protoc`, we need this for bilibili client-side protobuf. See [hyperium/tonic#dependencies](https://github.com/hyperium/tonic/#dependencies) for installation guide.
 
 Once you have all these above installed, you can simply run `cargo build --release` for release artifact.
+
+## Contribution
+
+You should install Git hooks for local inspection:
+
+```bash
+/bin/rm -rf .git/hooks && ln -s ../.git-hooks ./.git/hooks
+```
+
+Your commits should pass the CI including `cargo fmt` and `cargo clippy` check.
+
+We use [Conventional Commit](https://www.conventionalcommits.org/en/v1.0.0/) for commit message, and the first line length of commit message should be less than or equal to 72.
