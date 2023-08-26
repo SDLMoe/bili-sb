@@ -2,10 +2,22 @@ name: Lint
 
 on:
   push:
+    branches: [master]
+    paths:
+      - "**.rs"
+      - "**.proto"
+      - "**.toml"
+      - "**.lock"
+      - ".github/workflows/*.yml"
+  pull_request:
     branches:
-      - main
-      - master
-  pull_request: {}
+      - "*"
+    paths:
+      - "**.rs"
+      - "**.proto"
+      - "**.toml"
+      - "**.lock"
+      - ".github/workflows/*.yml"
 
 env:
   CARGO_TERM_COLOR: always
