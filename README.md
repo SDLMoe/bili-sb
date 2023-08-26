@@ -11,7 +11,11 @@ Requirements:
   - Run this script to ensure your toolchains are up to date: `rustup update && rustup component add rustfmt clippy`
 - Protobuf Compiler, i.e. `protoc`, we need this for bilibili client-side protobuf. See [hyperium/tonic#dependencies](https://github.com/hyperium/tonic/#dependencies) for installation guide.
 
-Once you have all these above installed, you can simply run `cargo build --release` for release artifact.
+Once you have all these above installed, for building release artifact, you can simply run:
+
+```bash
+cargo build --release --package bili-sb
+```
 
 ## Contribution
 
