@@ -231,8 +231,6 @@ dependencies = [
  "axum",
  "bili-proto",
  "clap",
- "extend",
- "glob",
  "http",
  "indoc",
  "log",
@@ -244,7 +242,6 @@ dependencies = [
  "serde_json",
  "tokio",
  "tonic",
- "tonic-build",
 ]
 
 [[package]]
@@ -445,17 +442,6 @@ checksum = "aa68f1b12764fab894d2755d2518754e71b4fd80ecfb822714a1206c2aab39bf"
 dependencies = [
  "cc",
  "libc",
-]
-
-[[package]]
-name = "extend"
-version = "1.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "311a6d2f1f9d60bff73d2c78a0af97ed27f79672f15c238192a5bbb64db56d00"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.29",
 ]
 
 [[package]]
