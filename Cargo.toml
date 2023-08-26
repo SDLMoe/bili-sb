@@ -2,6 +2,7 @@
 members = [
   "bili-proto",
   "bili-sb",
+  "blake3-pow",
 ]
 
 resolver = "2"
