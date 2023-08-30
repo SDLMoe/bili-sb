@@ -1,4 +1,4 @@
-use std::{fmt::Display, ops::Deref};
+use std::{error::Error as StdError, fmt::Display, ops::Deref};
 
 use anyhow::Context;
 use axum::response::{Html, IntoResponse};
@@ -13,7 +13,23 @@ use crate::data::{Resp, RespCode};
 pub type AppResult<T, E = AnyhowWrapper> = Result<T, E>;
 
 #[repr(transparent)]
+#[must_use]
 pub struct AnyhowWrapper(pub anyhow::Error);
+
+impl AnyhowWrapper {
+  #[inline]
+  pub fn new(inner: anyhow::Error) -> Self {
+    Self(inner)
+  }
+
+  #[inline]
+  pub fn new_inner<E>(inner: E) -> Self
+  where
+    E: StdError + Send + Sync + 'static,
+  {
+    Self(anyhow::Error::new(inner))
+  }
+}
 
 impl From<anyhow::Error> for AnyhowWrapper {
   fn from(value: anyhow::Error) -> Self {
@@ -68,6 +84,7 @@ impl Default for AppError {
   }
 }
 
+#[allow(dead_code)]
 impl AppError {
   pub fn new() -> AppError {
     AppError {
@@ -89,22 +106,20 @@ impl AppError {
   }
 }
 
-pub trait AnyhowExt<T>: Sized {
+pub trait AnyhowExt<T> {
   fn with_app_error(self, code: RespCode) -> Self;
-  fn into_app_result(self) -> AppResult<T>;
 }
 
 impl<T> AnyhowExt<T> for anyhow::Result<T> {
+  #[inline]
   fn with_app_error(self, code: RespCode) -> Self {
     self.context(AppError::new().resp_code(code))
-  }
-
-  fn into_app_result(self) -> AppResult<T> {
-    self.map_err(|err| err.into())
   }
 }
 
 pub trait IntoAppResult<T> {
+  fn into_app_result(self) -> AppResult<T>;
+
   fn context_into_app<C>(self, context: C) -> AppResult<T>
   where
     C: Display + Send + Sync + 'static;
@@ -115,15 +130,63 @@ pub trait IntoAppResult<T> {
     F: FnOnce() -> C;
 }
 
+impl<T> IntoAppResult<T> for anyhow::Result<T> {
+  #[inline]
+  fn into_app_result(self) -> AppResult<T> {
+    match self {
+      Ok(ok) => Ok(ok),
+      Err(err) => Err(AnyhowWrapper(err)),
+    }
+  }
+
+  #[inline]
+  fn context_into_app<C>(self, context: C) -> AppResult<T>
+  where
+    C: Display + Send + Sync + 'static,
+  {
+    match self {
+      Ok(t) => Ok(t),
+      Err(e) => Err(AnyhowWrapper(e.context(context))),
+    }
+  }
+
+  #[inline]
+  fn with_context_into_app<C, F>(self, context: F) -> AppResult<T>
+  where
+    C: Display + Send + Sync + 'static,
+    F: FnOnce() -> C,
+  {
+    match self {
+      Ok(ok) => Ok(ok),
+      Err(error) => Err(AnyhowWrapper(error.context(context()))),
+    }
+  }
+}
+
+macro_rules! impl_into_app {
+  () => {
+    #[inline]
+    fn into_app_result(self) -> AppResult<T> {
+      match self {
+        Ok(ok) => Ok(ok),
+        Err(err) => Err(AnyhowWrapper(anyhow::Error::new(err))),
+      }
+    }
+  };
+}
+
 impl<T> IntoAppResult<T> for Result<T, tonic::Status> {
+  impl_into_app!();
+
   fn context_into_app<C>(self, context: C) -> AppResult<T>
   where
     C: Display + Send + Sync + 'static,
   {
     self
       .map_err(map_bili_status)
-      .context(context)
+      .map_err(anyhow::Error::new)
       .with_app_error(RespCode::BILI_CLIENT_ERROR)
+      .context(context)
       .into_app_result()
   }
 
@@ -134,6 +197,7 @@ impl<T> IntoAppResult<T> for Result<T, tonic::Status> {
   {
     self
       .map_err(map_bili_status)
+      .map_err(anyhow::Error::new)
       .with_context(context)
       .with_app_error(RespCode::BILI_CLIENT_ERROR)
       .into_app_result()
@@ -141,6 +205,8 @@ impl<T> IntoAppResult<T> for Result<T, tonic::Status> {
 }
 
 impl<T> IntoAppResult<T> for Result<T, DieselError> {
+  impl_into_app!();
+
   fn context_into_app<C>(self, context: C) -> AppResult<T>
   where
     C: Display + Send + Sync + 'static,
@@ -177,7 +243,7 @@ pub enum RpcError {
   Parsed(Vec<RpcStatus>),
 }
 
-pub fn map_bili_status(raw: tonic::Status) -> RpcError {
+fn map_bili_status(raw: tonic::Status) -> RpcError {
   let Some(parsed) = BiliStatus::decode(raw.details()).ok() else {
     return RpcError::Raw(raw);
   };

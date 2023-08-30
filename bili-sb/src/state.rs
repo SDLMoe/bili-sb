@@ -10,7 +10,7 @@ use tokio::sync::OnceCell;
 use crate::{
   client::{self, *},
   data::RespCode,
-  error::{AnyhowExt, AppResult},
+  error::*,
 };
 
 pub type AppState = State<Arc<App>>;
@@ -40,6 +40,7 @@ impl App {
     })
   }
 
+  #[allow(dead_code)]
   pub async fn bili(&self) -> AppResult<tonic::transport::Channel> {
     self
       .bili_channel
@@ -71,4 +72,5 @@ pub type PgAsyncPool = bb8::Pool<PgConnectionManager>;
 pub type PgConnectionManager = AsyncDieselConnectionManager<AsyncPgConnection>;
 pub type PooledPgCon<'a> = bb8::PooledConnection<'a, PgConnectionManager>;
 pub type Bb8DieselRunError = bb8::RunError<diesel_async::pooled_connection::PoolError>;
+#[allow(dead_code)]
 pub type PgGetAsyncConResult<'a> = Result<PooledPgCon<'a>, Bb8DieselRunError>;

@@ -20,11 +20,13 @@ use tower_http::compression::CompressionLayer;
 
 use crate::{data::*, error::*, state::*};
 
-pub mod client;
-pub mod data;
-pub mod db;
-pub mod error;
-pub mod state;
+#[allow(dead_code)]
+mod client;
+mod data;
+mod db;
+mod error;
+mod macros;
+mod state;
 
 fn clap_v3_styles() -> Styles {
   Styles::styled()
@@ -123,9 +125,11 @@ async fn user_create(state: AppState, ip: SecureClientIp) -> AppResult<Resp<Crea
     .values(&user)
     .execute(&mut con)
     .await
-    .unwrap();
+    .context_into_app("Failed to insert")?;
 
-  assert_eq!(result, 1);
+  if result != 1 {
+    return Err(app_err!(RespCode::DATABASE_ERROR, "Database insert failed"));
+  }
 
   Ok(CreateUserData { uuid: user.id }.into())
 }
