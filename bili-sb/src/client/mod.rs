@@ -13,14 +13,14 @@ use tonic::{metadata::MetadataValue, transport::Channel, Request, Status};
 ///
 /// ```no_run
 ///  let channel = connect(BILI_GRPC_URL).await?;
-///  let mut view = pb_client!(channel as ViewClient);
+///  let mut foo = pb_client!(channel.clone(), FooClient);
+///  let mut bar = pb_client!(channel, BarClient);
 /// ```
 #[macro_export]
 macro_rules! pb_client {
-  ($channel:ident as $client:ident) => {
+  ($channel:expr, $client:ident $(,)?) => {
     <$client<::tonic::transport::Channel>>::with_interceptor(
-      // [Channel::clone] is cheap to call
-      $channel.clone(),
+      $channel,
       $crate::client::bili_interceptor,
     )
   };
