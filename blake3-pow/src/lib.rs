@@ -9,6 +9,23 @@ pub fn epoch_sec() -> u64 {
     .as_secs()
 }
 
+macro_rules! round {
+  ($hasher:ident, $salt:ident, $timestamp:ident, $key:ident $(,)?) => {
+    #[cfg(not(feature = "rayon"))]
+    {
+      $hasher.update($salt);
+      $hasher.update(&$timestamp.to_be_bytes());
+      $hasher.update(&$key.to_be_bytes());
+    }
+    #[cfg(feature = "rayon")]
+    {
+      $hasher.update_rayon($salt);
+      $hasher.update_rayon(&$timestamp.to_be_bytes());
+      $hasher.update_rayon(&$key.to_be_bytes());
+    }
+  };
+}
+
 pub fn verify(salt: &[u8], cost: u32, timestamp: u64, key: u128) -> bool {
   let now_ts = epoch_sec();
   if (now_ts.wrapping_add(60)..=now_ts.wrapping_sub(60)).contains(&timestamp) {
@@ -16,9 +33,7 @@ pub fn verify(salt: &[u8], cost: u32, timestamp: u64, key: u128) -> bool {
   }
 
   let mut hasher = blake3::Hasher::new();
-  hasher.update(salt);
-  hasher.update(&timestamp.to_be_bytes());
-  hasher.update(&key.to_be_bytes());
+  round!(hasher, salt, timestamp, key);
   let hash = hasher.finalize();
   hash.as_bytes().leading_zeros() >= cost
 }
@@ -28,9 +43,7 @@ pub fn search(salt: &[u8], cost: u32, timestamp: u64, max_effort: usize) -> Opti
   for _ in 0..max_effort {
     let key: u128 = rng.gen();
     let mut hasher = blake3::Hasher::new();
-    hasher.update(salt);
-    hasher.update(&timestamp.to_be_bytes());
-    hasher.update(&key.to_be_bytes());
+    round!(hasher, salt, timestamp, key);
     let hash = hasher.finalize();
     if hash.as_bytes().leading_zeros() >= cost {
       return Some(key);

@@ -1,11 +1,13 @@
-use std::{sync::Arc, time::Duration};
+use std::{hash::BuildHasherDefault, sync::Arc, time::Duration};
 
 use anyhow::Context;
 use axum::extract::State;
+use dashmap::DashMap;
 use diesel_async::{pooled_connection::AsyncDieselConnectionManager, AsyncPgConnection};
 use http::Uri;
 use log::info;
 use tokio::sync::OnceCell;
+use uuid::Uuid;
 
 use crate::{
   client::{self, *},
@@ -14,11 +16,20 @@ use crate::{
 };
 
 pub type AppState = State<Arc<App>>;
+pub type ADashMap<K, V> = DashMap<K, V, BuildHasherDefault<ahash::AHasher>>;
 
 #[derive(Clone, Debug)]
 pub struct App {
   bili_channel: OnceCell<tonic::transport::Channel>,
   db_pool: PgAsyncPool,
+  pub pow_map: Arc<ADashMap<Uuid, PowProperty>>,
+}
+
+#[derive(Debug, Clone)]
+pub struct PowProperty {
+  pub salt: Vec<u8>,
+  pub cost: u32,
+  pub timestamp: u64,
 }
 
 impl App {
@@ -37,6 +48,7 @@ impl App {
     Ok(Self {
       bili_channel: Default::default(),
       db_pool: pool,
+      pow_map: Arc::new(DashMap::default()),
     })
   }
 

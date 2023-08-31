@@ -3,6 +3,9 @@ name = "blake3-pow"
 version = "0.0.0"
 edition = "2021"
 
+[features]
+rayon = ["blake3/rayon"]
+
 [dependencies]
 blake3 = "1.4.1"
 rand = "0.8.5"
