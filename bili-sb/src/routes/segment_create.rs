@@ -21,7 +21,11 @@ pub async fn segment_create(state: AppState, body: Json<CreateSegmentReq>) -> Ap
     .context_into_app("Failed to fetch user")?;
 
   let Some(user) = users.get(0).cloned() else {
-    return Err(app_err!(RespCode::INVALID_PARAMS, "Invalid user uuid `{}`", body.submitter));
+    return Err(app_err!(
+      RespCode::INVALID_PARAMS,
+      "Invalid user uuid `{}`",
+      body.submitter
+    ));
   };
 
   let reply = view
