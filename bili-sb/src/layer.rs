@@ -1,8 +1,12 @@
+use std::net::IpAddr;
+
 use axum::{
   middleware::Next,
   response::{IntoResponse, Response},
 };
+use axum_client_ip::*;
 use http::{Method, Request, StatusCode};
+use tower_governor::{key_extractor::KeyExtractor, GovernorError};
 
 use crate::state::*;
 
@@ -54,4 +58,25 @@ pub async fn pow_layer<B>(state: AppState, mut request: Request<B>, next: Next<B
   }
 
   next.run(request).await
+}
+
+#[derive(Clone, Debug)]
+pub struct SecureIpExtractor;
+
+impl KeyExtractor for SecureIpExtractor {
+  type Key = IpAddr;
+
+  fn extract<T>(&self, req: &Request<T>) -> Result<Self::Key, GovernorError> {
+    req.extensions();
+    SecureClientIp::from(
+      req
+        .extensions()
+        .get()
+        .ok_or_else(|| GovernorError::UnableToExtractKey)?,
+      req.headers(),
+      req.extensions(),
+    )
+    .map(|ip| ip.0)
+    .map_err(|_err| GovernorError::UnableToExtractKey)
+  }
 }

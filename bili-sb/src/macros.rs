@@ -11,3 +11,14 @@ macro_rules! app_err {
     )
   }};
 }
+
+#[macro_export]
+macro_rules! ratelimit {
+  ( $conf:expr $(,)? ) => {
+    ::tower::ServiceBuilder::new()
+      .layer(::axum::error_handling::HandleErrorLayer::new(
+        |e| async move { tower_governor::errors::display_error(e) },
+      ))
+      .layer(::tower_governor::GovernorLayer { config: $conf })
+  };
+}

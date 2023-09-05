@@ -78,6 +78,7 @@ macro_rules! resp_codes {
 
 resp_codes! {
   (0, SUCCESS),
+  (1, INVALID_PARAMS),
   (100, DATABASE_ERROR),
   (101, BILI_CLIENT_ERROR),
   (10000, UNKNOWN),

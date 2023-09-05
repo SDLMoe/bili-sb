@@ -78,6 +78,16 @@ impl App {
       .with_app_error(RespCode::DATABASE_ERROR)
       .into_app_result()
   }
+
+  pub async fn db_con_owned(&self) -> AppResult<PooledPgCon<'static>> {
+    self
+      .db_pool
+      .get_owned()
+      .await
+      .context("Failed to get pooled database connection")
+      .with_app_error(RespCode::DATABASE_ERROR)
+      .into_app_result()
+  }
 }
 
 pub type PgAsyncPool = bb8::Pool<PgConnectionManager>;

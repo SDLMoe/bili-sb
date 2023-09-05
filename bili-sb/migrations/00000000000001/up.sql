@@ -20,18 +20,25 @@ CREATE TABLE users (
   id            UUID      NOT NULL PRIMARY KEY,
   register_time TIMESTAMP NOT NULL,
   register_ip   CIDR      NOT NULL,
-  -- last vote / upload segment timestmap
+  -- last vote / upload segment timestamp
   last_operation_time TIMESTAMP
 );
 
 CREATE TABLE segments (
   id        UUID   NOT NULL PRIMARY KEY,
   cid       BIGINT NOT NULL REFERENCES video_parts(cid),
-  start_seg REAL   NOT NULL,
-  end_seg   REAL   NOT NULL,
-  upvote    INT    NOT NULL,
-  downvote  INT    NOT NULL,
-  submitter UUID   NOT NULL REFERENCES users(id)
+  "start"   REAL   NOT NULL,
+  "end"     REAL   NOT NULL,
+  submitter UUID   NOT NULL REFERENCES users(id),
+  CHECK("start" < "end")
 );
 
-CREATE INDEX idx_segments_cid ON segments(cid);
+CREATE TYPE vote AS ENUM ('up', 'down');
+
+CREATE TABLE votes (
+  id UUID NOT NULL REFERENCES segments(id),
+  voter      UUID NOT NULL REFERENCES users(id),
+  "type"     vote NOT NULL,
+
+  PRIMARY KEY (id, voter)
+)

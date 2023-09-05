@@ -3,64 +3,37 @@ use std::{net::SocketAddr, sync::Arc, time::Duration};
 use anyhow::Context;
 use axum::{
   body::Body,
-  error_handling::HandleErrorLayer,
   response::{IntoResponse, Response},
   routing::{get, post},
-  BoxError, Router,
+  Router,
 };
-use axum_client_ip::{SecureClientIp, SecureClientIpSource};
-use clap::{
-  builder::{styling::AnsiColor, Styles},
-  Parser,
-};
+use axum_client_ip::SecureClientIp;
+
+use clap::Parser;
 use diesel_async::RunQueryDsl;
 use http::{Method, Request, StatusCode};
 use indoc::concatdoc;
 use log::info;
 use rand::RngCore;
-use tokio::time::sleep;
-use tower::ServiceBuilder;
-use tower_governor::{
-  errors::display_error, governor::GovernorConfigBuilder, key_extractor::SmartIpKeyExtractor,
-  GovernorLayer,
-};
+use tokio::{spawn, time::sleep};
 use tower_http::compression::CompressionLayer;
 use uuid::Uuid;
 
-use crate::{data::*, error::*, layer::*, state::*};
+use crate::config::Config;
+#[allow(unused)]
+use crate::{client::*, data::*, error::*, layer::*, routes::*, state::*};
 
+mod cli;
 #[allow(dead_code)]
 mod client;
+mod config;
 mod data;
 mod db;
 mod error;
 mod layer;
 mod macros;
+mod routes;
 mod state;
-
-fn clap_v3_styles() -> Styles {
-  Styles::styled()
-    .header(AnsiColor::Yellow.on_default())
-    .usage(AnsiColor::Green.on_default())
-    .literal(AnsiColor::Green.on_default())
-    .placeholder(AnsiColor::Green.on_default())
-}
-
-#[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
-#[command(styles(clap_v3_styles()))]
-struct Args {
-  // `[::]` binds to IPv6 and IPv4 at the same time
-  // See: https://github.com/tokio-rs/axum/discussions/834
-  /// Address to bind
-  #[arg(short = 'i', long = "addr")]
-  #[arg(default_value = "[::]:8402")]
-  #[arg(env = "BILI_SB_ADDR")]
-  addr: String,
-  #[arg(short = 'd', long = "database-url")]
-  #[arg(env = "BILI_SB_DATABASE_URL")]
-  database_url: String,
-}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -84,65 +57,39 @@ async fn main() -> anyhow::Result<()> {
     }
   }
 
-  let args = Args::parse();
+  let args = cli::Args::parse();
+
+  let config = if let Some(path) = args.config {
+    info!("Loading config {}", path.to_string_lossy());
+    Config::load(path)?
+  } else {
+    Config::default()
+  };
+
   let addr = tokio::net::lookup_host(&args.addr)
     .await
     .with_context(|| format!("Cannot lookup DNS for addr: {}", args.addr))?
     .next()
     .with_context(|| format!("No DNS resp for addr: {}", args.addr))?;
 
-  // TODO: configurable
-  let post_ratelimit_conf = Box::new(
-    GovernorConfigBuilder::default()
-      .key_extractor(SmartIpKeyExtractor)
-      .methods(vec![Method::POST])
-      .per_second(5)
-      .burst_size(20)
-      .finish()
-      .unwrap(),
-  );
-
-  let post_ratelimit = ServiceBuilder::new()
-    .layer(HandleErrorLayer::new(|e: BoxError| async move {
-      display_error(e)
-    }))
-    .layer(GovernorLayer {
-      config: Box::leak(post_ratelimit_conf),
-    });
-
-  // TODO: configurable
-  let get_ratelimit_conf = Box::new(
-    GovernorConfigBuilder::default()
-      .key_extractor(SmartIpKeyExtractor)
-      .methods(vec![Method::GET])
-      .per_millisecond(500)
-      .burst_size(50)
-      .finish()
-      .unwrap(),
-  );
-
-  let get_ratelimit = ServiceBuilder::new()
-    .layer(HandleErrorLayer::new(|e: BoxError| async move {
-      display_error(e)
-    }))
-    .layer(GovernorLayer {
-      config: Box::leak(get_ratelimit_conf),
-    });
-
   let state = Arc::new(App::new(&args.database_url).await?);
+  let post_ratelimit_conf = Box::new(config.ratelimit_post_conf());
+  info!("[POST] ratelimit enabled: {:?}", &config.ratelimit.get);
+  let get_ratelimit_conf = Box::new(config.ratelimit_get_conf());
+  info!("[GET ] ratelimit enabled: {:?}", &config.ratelimit.post);
 
   let router = Router::new()
     .route("/", get(root))
     .route("/pow/choose", post(pow_choose))
     .route("/user/create", post(user_create))
+    .route("/segment/create", post(segment_create))
     .fallback(fallback)
     .with_state(Arc::clone(&state))
     .layer(CompressionLayer::new())
     .layer(axum::middleware::from_fn_with_state(state, pow_layer))
-    // TODO: configurable
-    .layer(SecureClientIpSource::ConnectInfo.into_extension())
-    .layer(post_ratelimit)
-    .layer(get_ratelimit);
+    .layer(ratelimit!(Box::leak(get_ratelimit_conf)))
+    .layer(ratelimit!(Box::leak(post_ratelimit_conf)))
+    .layer(config.ip_source.into_extension());
 
   info!("Server is listening on {}", addr);
   axum::Server::try_bind(&addr)
@@ -212,7 +159,7 @@ async fn pow_choose(state: AppState) -> AppResult<Resp<PowProblemData>> {
     },
   );
 
-  tokio::spawn(async move {
+  spawn(async move {
     sleep(Duration::from_secs(60)).await;
     state.pow_map.remove(&uuid);
   });
