@@ -76,8 +76,7 @@ message ActivitySeason {
     bilibili.app.archive.v1.Arc arc = 1;
     // 分P信息
     repeated ViewPage pages = 2;
-    //("OnwerExt"为源码中拼写错误)
-    OnwerExt owner_ext = 3;
+    Ext owner_ext = 3;
     // 稿件用户操作状态
     ReqUser req_user = 4;
     // 充电排行
@@ -372,7 +371,7 @@ message CacheViewReply {
     //
     repeated ViewPage pages = 2;
     //
-    OnwerExt owner_ext = 3;
+    Ext owner_ext = 3;
     //
     ReqUser req_user = 4;
     //
@@ -1124,8 +1123,8 @@ message Online {
     string player_online_logo = 2;
 }
 
-// UP主扩展信息 ("OnwerExt"为源码中拼写错误)
-message OnwerExt {
+// UP主扩展信息
+message Ext {
     // 认证信息
     OfficialVerify official_verify = 1;
     // 直播信息
@@ -2430,8 +2429,8 @@ message ViewReply {
     bilibili.app.archive.v1.Arc arc = 1;
     // 分P信息
     repeated ViewPage pages = 2;
-    // UP主扩展信息 ("OnwerExt"为源码中拼写错误)
-    OnwerExt owner_ext = 3;
+    // UP主扩展信息
+    Ext owner_ext = 3;
     // 稿件用户操作状态
     ReqUser req_user = 4;
     // 稿件TAG

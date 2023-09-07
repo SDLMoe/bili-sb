@@ -1,3 +1,3 @@
 # bili-proto
 
-Protobuf stubs for bilibili, seperated crate for faster indexing.
+Protobuf stubs for bilibili, separated crate for faster indexing.

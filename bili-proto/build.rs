@@ -16,6 +16,8 @@ fn main() -> anyhow::Result<()> {
   fs::create_dir_all(&output_proto)
     .with_context(|| format!("Cannot create directory {:?}", output_proto.to_str()))?;
 
+  println!("cargo:rerun-if-changed=proto");
+
   tonic_build::configure()
     .out_dir(output_proto)
     .build_server(false)
