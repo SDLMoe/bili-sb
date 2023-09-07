@@ -34,7 +34,7 @@ pub struct PowProperty {
 
 impl App {
   pub async fn new(database_url: &str) -> anyhow::Result<Self> {
-    Uri::try_from(database_url.clone()).context(
+    Uri::try_from(database_url).context(
       "Invalid uri for database url, example: postgres://user:paSsw0rD@localhost:3213/bilisb",
     )?;
     log::info!("Connecting to database `{}`", database_url);

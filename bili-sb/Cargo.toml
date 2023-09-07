@@ -20,7 +20,7 @@ bili-proto = { path = "../bili-proto" }
 blake3-pow = { path = "../blake3-pow" }
 clap = { version = "4.4.1", features = ["derive", "cargo", "env"] }
 dashmap = "5.5.1"
-diesel = { version = "2.1.1", features = ["ipnet-address", "time", "uuid"] }
+diesel = { version = "2.1.1", features = ["ipnet-address", "uuid"] }
 diesel-async = { version = "0.3.2", features = ["postgres", "bb8"] }
 diesel-derive-enum = { version = "2.1.0", features = ["postgres"] }
 dotenvy = { version = "0.15.7", optional = true }
@@ -38,7 +38,6 @@ rand = "0.8.5"
 serde = { version = "1.0.183", features = ["derive"] }
 serde_json = "1.0.105"
 thiserror = "1.0.47"
-time = "0.3.28"
 tokio = { version = "1.32", features = ["full"] }
 toml = "0.7.6"
 tonic = { version = "0.9.2", features = ["tls-webpki-roots", "gzip"] }
