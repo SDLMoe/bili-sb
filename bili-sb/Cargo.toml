@@ -13,7 +13,7 @@ abv = "0.2.0"
 ahash = "0.8.3"
 anyhow = "1.0.75"
 axum = { version = "0.6.20", features = ["http2", "headers", "tower-log"] }
-axum-client-ip = { git = "https://github.com/Colerar/axum-client-ip.git", branch = "pub-api" }
+axum-client-ip = "0.4.2"
 base64-simd = "0.8.0"
 bb8 = "0.8.1"
 bili-proto = { path = "../bili-proto" }

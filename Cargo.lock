@@ -218,12 +218,12 @@ dependencies = [
 
 [[package]]
 name = "axum-client-ip"
-version = "0.4.1"
-source = "git+https://github.com/Colerar/axum-client-ip.git?branch=pub-api#c30950f8d51451b07313b336a77fb9c06c62beda"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1ef117890a418b7832678d9ea1e1c08456dd7b2fd1dadb9676cd6f0fe7eb4b21"
 dependencies = [
  "axum",
  "forwarded-header-value",
- "hyper",
  "serde",
 ]
 
@@ -421,9 +421,9 @@ checksum = "14c189c53d098945499cdfa7ecc63567cf3886b3332b312a5b4585d8d3a6a610"
 
 [[package]]
 name = "bytes"
-version = "1.4.0"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "89b2fd2a0dcf38d7971e2194b6b6eebab45ae01067456a7fd93d5547a61b70be"
+checksum = "a2bd12c1caf447e69cd4528f47f94d203fd2582878ecb9e9465484c4148a8223"
 
 [[package]]
 name = "cc"
