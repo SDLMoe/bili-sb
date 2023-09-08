@@ -60,5 +60,5 @@ fn round<const N: usize>(salt: &mut [u8; N], cost: u32) -> bool {
   thread_rng().fill_bytes(salt);
   let now_ts = epoch_sec();
   let key = search(salt, cost, now_ts, usize::MAX).unwrap();
-  verify(salt, cost, now_ts, key)
+  verify(salt, cost, now_ts, 60, key)
 }

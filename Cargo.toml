@@ -9,3 +9,6 @@ resolver = "2"
 
 [profile.dev.package."*"]
 opt-level = 1
+
+[profile.dev.package.blake3]
+opt-level = 3

@@ -14,6 +14,11 @@ pub const POW_HEADER_UUID: &str = "bilisb-pow-uuid";
 pub const POW_HEADER_SOLUTION: &str = "bilisb-pow-solution";
 
 pub async fn pow_layer<B>(state: AppState, mut request: Request<B>, next: Next<B>) -> Response {
+  let config = &state.config.pow;
+  if !config.enabled {
+    return next.run(request).await;
+  }
+
   if request.method() != Method::POST {
     return next.run(request).await;
   }
@@ -53,7 +58,13 @@ pub async fn pow_layer<B>(state: AppState, mut request: Request<B>, next: Next<B
       .into_response();
   };
 
-  if !blake3_pow::verify(&pow.salt, pow.cost, pow.timestamp, solution) {
+  if !blake3_pow::verify(
+    &pow.salt,
+    pow.cost,
+    pow.timestamp,
+    config.timestamp_delta,
+    solution,
+  ) {
     return (StatusCode::BAD_REQUEST, "wrong answer".to_string()).into_response();
   }
 

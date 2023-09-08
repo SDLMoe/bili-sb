@@ -72,11 +72,24 @@ async fn main() -> anyhow::Result<()> {
     .next()
     .with_context(|| format!("No DNS resp for addr: {}", args.addr))?;
 
-  let state = Arc::new(App::new(&args.database_url).await?);
-  let post_ratelimit_conf = Box::new(config.ratelimit_post_conf());
-  info!("[POST] ratelimit enabled: {:?}", &config.ratelimit.get);
-  let get_ratelimit_conf = Box::new(config.ratelimit_get_conf());
-  info!("[GET ] ratelimit enabled: {:?}", &config.ratelimit.post);
+  let config = Arc::new(config);
+  if config.pow.enabled {
+    info!("PoW enabled: {:?}", &config.pow);
+  } else {
+    info!("PoW disabled!");
+  }
+
+  let state = Arc::new(App::new(&args.database_url, config).await?);
+  let post_ratelimit_conf = Box::new(state.config.ratelimit_post_conf());
+  info!(
+    "[POST] ratelimit enabled: {:?}",
+    &state.config.ratelimit.get
+  );
+  let get_ratelimit_conf = Box::new(state.config.ratelimit_get_conf());
+  info!(
+    "[GET ] ratelimit enabled: {:?}",
+    &state.config.ratelimit.post
+  );
 
   let router = Router::new()
     .route("/", get(root))
@@ -86,10 +99,13 @@ async fn main() -> anyhow::Result<()> {
     .fallback(fallback)
     .with_state(Arc::clone(&state))
     .layer(CompressionLayer::new())
-    .layer(axum::middleware::from_fn_with_state(state, pow_layer))
+    .layer(axum::middleware::from_fn_with_state(
+      Arc::clone(&state),
+      pow_layer,
+    ))
     .layer(ratelimit!(Box::leak(get_ratelimit_conf)))
     .layer(ratelimit!(Box::leak(post_ratelimit_conf)))
-    .layer(config.ip_source.into_extension());
+    .layer(state.config.ip_source.clone().into_extension());
 
   info!("Server is listening on {}", addr);
   axum::Server::try_bind(&addr)
@@ -136,18 +152,27 @@ async fn user_create(state: AppState, ip: SecureClientIp) -> AppResult<Resp<Crea
 }
 
 async fn pow_choose(state: AppState) -> AppResult<Resp<PowProblemData>> {
-  // TODO: configurable
-  let mut salt = vec![0; 32];
-  let cost = 19;
+  let config = &state.config.pow;
+  if !config.enabled {
+    let data = PowProblemData {
+      enabled: false,
+      ..Default::default()
+    };
+    return Ok(data.into());
+  }
+
+  let mut salt = vec![0; config.salt_size.get()];
+  let cost = config.cost;
   let timestamp = blake3_pow::epoch_sec();
   rand::thread_rng().fill_bytes(&mut salt);
 
   let uuid = Uuid::new_v4();
   let data = PowProblemData {
-    salt: base64_simd::STANDARD.encode_to_string(&salt),
-    cost,
-    timestamp,
-    uuid,
+    enabled: true,
+    salt: Some(base64_simd::STANDARD.encode_to_string(&salt)),
+    cost: Some(cost),
+    timestamp: Some(timestamp),
+    uuid: Some(uuid),
   };
 
   state.pow_map.insert(

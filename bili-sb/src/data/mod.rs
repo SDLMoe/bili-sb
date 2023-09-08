@@ -14,13 +14,18 @@ pub struct CreateUserData {
   pub uuid: Uuid,
 }
 
-#[derive(Serialize)]
+#[derive(Default, Serialize)]
 pub struct PowProblemData {
-  pub uuid: Uuid,
+  pub enabled: bool,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub uuid: Option<Uuid>,
   /// base64-encoded salt
-  pub salt: String,
-  pub cost: u32,
-  pub timestamp: u64,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub salt: Option<String>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub cost: Option<u32>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub timestamp: Option<u64>,
 }
 
 #[derive(Deserialize, Debug)]

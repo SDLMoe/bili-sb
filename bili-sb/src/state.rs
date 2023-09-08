@@ -11,6 +11,7 @@ use uuid::Uuid;
 
 use crate::{
   client::{self, *},
+  config::Config,
   data::RespCode,
   error::*,
 };
@@ -23,6 +24,7 @@ pub struct App {
   bili_channel: OnceCell<tonic::transport::Channel>,
   db_pool: PgAsyncPool,
   pub pow_map: Arc<ADashMap<Uuid, PowProperty>>,
+  pub config: Arc<Config>,
 }
 
 #[derive(Debug, Clone)]
@@ -33,7 +35,7 @@ pub struct PowProperty {
 }
 
 impl App {
-  pub async fn new(database_url: &str) -> anyhow::Result<Self> {
+  pub async fn new(database_url: &str, config: Arc<Config>) -> anyhow::Result<Self> {
     Uri::try_from(database_url).context(
       "Invalid uri for database url, example: postgres://user:paSsw0rD@localhost:3213/bilisb",
     )?;
@@ -49,6 +51,7 @@ impl App {
       bili_channel: Default::default(),
       db_pool: pool,
       pow_map: Arc::new(DashMap::default()),
+      config,
     })
   }
 

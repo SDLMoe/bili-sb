@@ -5,7 +5,7 @@ use http::Method;
 use std::{
   fs::File,
   io::{BufReader, Read},
-  num::{NonZeroU32, NonZeroU64},
+  num::{NonZeroU32, NonZeroU64, NonZeroUsize},
   path::Path,
   time::Duration,
 };
@@ -15,6 +15,10 @@ use serde::Deserialize;
 
 use crate::layer::SecureIpExtractor;
 
+mod default;
+
+use default::*;
+
 #[derive(Deserialize, Debug, Clone)]
 #[serde(rename_all = "kebab-case")]
 pub struct Config {
@@ -22,6 +26,8 @@ pub struct Config {
   pub ip_source: SecureClientIpSource,
   #[serde(default)]
   pub ratelimit: Ratelimits,
+  #[serde(default)]
+  pub pow: PowConfig,
 }
 
 impl Config {
@@ -44,22 +50,7 @@ impl Config {
       )
     })
   }
-}
 
-impl Default for Config {
-  fn default() -> Self {
-    Self {
-      ip_source: ip_source_default(),
-      ratelimit: Default::default(),
-    }
-  }
-}
-
-fn ip_source_default() -> SecureClientIpSource {
-  SecureClientIpSource::ConnectInfo
-}
-
-impl Config {
   pub fn ratelimit_get_conf(
     &self,
   ) -> GovernorConfig<SecureIpExtractor, NoOpMiddleware<QuantaInstant>> {
@@ -94,30 +85,8 @@ pub struct Ratelimits {
   pub post: RatelimitConfig,
 }
 
-impl Default for Ratelimits {
-  fn default() -> Self {
-    Self {
-      get: ratelimit_get_default(),
-      post: ratelimit_post_default(),
-    }
-  }
-}
-
-fn ratelimit_get_default() -> RatelimitConfig {
-  RatelimitConfig {
-    period: RatelimitPeriod::PerMs(unsafe { NonZeroU64::new_unchecked(500) }),
-    burst_size: unsafe { NonZeroU32::new_unchecked(50) },
-  }
-}
-
-fn ratelimit_post_default() -> RatelimitConfig {
-  RatelimitConfig {
-    period: RatelimitPeriod::PerSecond(unsafe { NonZeroU64::new_unchecked(1) }),
-    burst_size: unsafe { NonZeroU32::new_unchecked(20) },
-  }
-}
-
 #[derive(Deserialize, Debug, Clone)]
+#[serde(rename_all = "kebab-case")]
 pub struct RatelimitConfig {
   #[serde(flatten)]
   pub period: RatelimitPeriod,
@@ -143,4 +112,19 @@ impl From<RatelimitPeriod> for Duration {
       P::PerNano(i) => Duration::from_nanos(i.get()),
     }
   }
+}
+
+#[derive(Deserialize, Debug, Clone)]
+#[serde(rename_all = "kebab-case")]
+pub struct PowConfig {
+  #[serde(default = "pow_enabled_default")]
+  pub enabled: bool,
+  #[serde(alias = "salt-len")]
+  #[serde(default = "pow_salt_size_default")]
+  pub salt_size: NonZeroUsize,
+  #[serde(default = "pow_cost_default")]
+  pub cost: u32,
+  #[serde(alias = "ts-delta")]
+  #[serde(default = "pow_timestamp_delta_default")]
+  pub timestamp_delta: u64,
 }
