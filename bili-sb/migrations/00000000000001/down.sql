@@ -5,4 +5,4 @@ DROP TABLE
   videos,
   votes
   ;
-DROP TYPE vote;
+DROP TYPE vote_type;

@@ -38,6 +38,7 @@ pub struct User {
   pub id: Uuid,
   pub register_time: SystemTime,
   pub register_ip: IpNet,
+  pub last_operation_ip: Option<IpNet>,
   pub last_operation_time: Option<SystemTime>,
 }
 
@@ -47,16 +48,10 @@ impl User {
       id: Uuid::new_v4(),
       register_time: SystemTime::now(),
       register_ip: ip,
+      last_operation_ip: None,
       last_operation_time: None,
     }
   }
-}
-
-#[derive(Debug, DbEnum)]
-#[ExistingTypePath = "schema::sql_types::Vote"]
-pub enum Vote {
-  Up,
-  Down,
 }
 
 #[derive(Serialize, Clone, Debug, Insertable, Queryable, Selectable)]
@@ -67,5 +62,25 @@ pub struct Segment {
   pub cid: i64,
   pub start: f32,
   pub end: f32,
+  #[serde(skip)]
   pub submitter: Uuid,
+  #[serde(skip)]
+  pub submitter_ip: IpNet,
+}
+
+#[derive(Clone, Copy, Debug, DbEnum)]
+#[ExistingTypePath = "schema::sql_types::VoteType"]
+pub enum VoteType {
+  Up,
+  Down,
+}
+
+#[derive(Clone, Debug, Insertable, Queryable, Selectable)]
+#[diesel(table_name = votes)]
+#[diesel(check_for_backend(Pg))]
+pub struct Vote {
+  pub segment: Uuid,
+  pub type_: VoteType,
+  pub voter: Uuid,
+  pub voter_ip: IpNet,
 }

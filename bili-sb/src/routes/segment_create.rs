@@ -10,7 +10,11 @@ use tokio::spawn;
 use crate::{client::*, error::*, state::*, *};
 use bilibili::app::archive::v1::Arc as Archive;
 
-pub async fn segment_create(state: AppState, body: Json<CreateSegmentReq>) -> AppResult<Response> {
+pub async fn segment_create(
+  state: AppState,
+  ip: SecureClientIp,
+  body: Json<CreateSegmentReq>,
+) -> AppResult<Response> {
   let bili = state.bili().await?;
   let mut view = pb_client!(bili, ViewClient);
   let mut db_con: PooledPgCon = state.db_con_owned().await?;
@@ -20,8 +24,19 @@ pub async fn segment_create(state: AppState, body: Json<CreateSegmentReq>) -> Ap
     .await
     .context_into_app("Failed to fetch user")?;
 
+  if body.start > body.end {
+    return Err(app_err_custom!(
+      StatusCode::UNPROCESSABLE_ENTITY,
+      RespCode::INVALID_PARAMS,
+      "segment start is larger than end, {} > {}",
+      body.start,
+      body.end
+    ));
+  };
+
   let Some(user) = users.get(0).cloned() else {
-    return Err(app_err!(
+    return Err(app_err_custom!(
+      StatusCode::UNPROCESSABLE_ENTITY,
       RespCode::INVALID_PARAMS,
       "Invalid user uuid `{}`",
       body.submitter
@@ -43,7 +58,8 @@ pub async fn segment_create(state: AppState, body: Json<CreateSegmentReq>) -> Ap
     .with_app_error(RespCode::BILI_CLIENT_ERROR)?;
 
   let Some(aid) = Abv::new(archive.aid as u64) else {
-    return Err(app_err!(
+    return Err(app_err_custom!(
+      StatusCode::UNPROCESSABLE_ENTITY,
       RespCode::BILI_CLIENT_ERROR,
       "ViewReply malformed, aid == 0"
     ));
@@ -73,7 +89,8 @@ pub async fn segment_create(state: AppState, body: Json<CreateSegmentReq>) -> Ap
   }
 
   if !parts.iter().any(|page| page.cid == body.cid.get() as i64) {
-    return Err(app_err!(
+    return Err(app_err_custom!(
+      StatusCode::UNPROCESSABLE_ENTITY,
       RespCode::INVALID_PARAMS,
       "cid is not valid {}",
       body.cid
@@ -97,6 +114,7 @@ pub async fn segment_create(state: AppState, body: Json<CreateSegmentReq>) -> Ap
     start: body.start,
     end: body.end,
     submitter: user.id,
+    submitter_ip: ip.0.into(),
   });
 
   let db_segment = Arc::clone(&segment);

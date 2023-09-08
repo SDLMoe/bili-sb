@@ -53,12 +53,15 @@ impl Deref for AnyhowWrapper {
 
 impl IntoResponse for AnyhowWrapper {
   fn into_response(self) -> axum::response::Response {
-    log::error!("Unexpected Error: {:?}", self.0);
-
     let Some(app_error) = self.0.downcast_ref::<AppError>() else {
+      log::error!("Unexpected Error: {:?}", self.0);
       let json = Resp::<()>::new_failure(RespCode::UNKNOWN, "UNKNOWN".to_string());
       return (StatusCode::INTERNAL_SERVER_ERROR, json).into_response();
     };
+
+    if app_error.http_code.is_server_error() {
+      log::error!("Unexpected Error: {:?}", self.0);
+    }
 
     let resp = Resp::<()>::new_failure(app_error.resp_code, format!("{:?}", self.0));
     (app_error.http_code, resp).into_response()

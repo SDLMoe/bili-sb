@@ -28,7 +28,7 @@ macro_rules! round {
 
 pub fn verify(salt: &[u8], cost: u32, timestamp: u64, ts_delta: u64, key: u128) -> bool {
   let now_ts = epoch_sec();
-  if (now_ts.wrapping_sub(ts_delta)..=now_ts.wrapping_add(ts_delta)).contains(&timestamp) {
+  if !(now_ts.wrapping_sub(ts_delta)..=now_ts.wrapping_add(ts_delta)).contains(&timestamp) {
     return false;
   }
 
