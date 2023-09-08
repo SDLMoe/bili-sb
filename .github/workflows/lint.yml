@@ -24,9 +24,15 @@ env:
   RUSTFLAGS: -D warnings
 
 jobs:
+  pre_ci:
+    uses: SDLMoe/.github/.github/workflows/pre_ci.yml@master
+
   check:
     name: Check Formatting
+    needs: pre_ci
+    if: needs.pre_ci.outputs.continue
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     continue-on-error: true
     steps:
       - name: Checkout
