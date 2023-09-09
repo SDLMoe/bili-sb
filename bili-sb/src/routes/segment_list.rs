@@ -39,10 +39,20 @@ pub async fn segment_list(
 
       vec
     },
-    R::Cids { cids } => {
-      // SAFETY: NonZeroU64 even can be *cast* to i64, so it's safe to transmute it
+    R::Cids { mut cids } => {
       let mut db_con = state.db_con().await?;
-      let cids: Vec<i64> = unsafe { transmute(cids) };
+      // # SAFETY
+      //   - NonZeroU64 is `#[repr(transparent)]` for u64,
+      //   - Casting between `u64` and `i64` is a no-op
+      //   - But the field order of `Vec` is not guaranteed, so we need `Vec::from_raw_parts` here
+      //
+      // # See also
+      //   - https://doc.rust-lang.org/nomicon/transmutes.html
+      //     (`Vec<i32>` and `Vec<u32>` *might* have their fields in the same order, or they might not)
+      //   - https://doc.rust-lang.org/reference/expressions/operator-expr.html#semantics
+      //   - https://doc.rust-lang.org/stable/std/num/struct.NonZeroU64.html#layout-1
+      let cids: Vec<i64> =
+        unsafe { Vec::from_raw_parts(transmute(cids.as_mut_ptr()), cids.len(), cids.capacity()) };
 
       let vec: Vec<db::Segment> = db::segments::table
         .limit(100)
