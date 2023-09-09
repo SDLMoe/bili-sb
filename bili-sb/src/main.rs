@@ -96,6 +96,7 @@ async fn main() -> anyhow::Result<()> {
     .route("/pow/choose", post(pow_choose))
     .route("/user/create", post(user_create))
     .route("/segment/create", post(segment_create))
+    .route("/segment/list", get(segment_list))
     .fallback(fallback)
     .with_state(Arc::clone(&state))
     .layer(CompressionLayer::new())

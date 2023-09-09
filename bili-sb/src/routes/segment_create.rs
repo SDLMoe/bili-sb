@@ -1,15 +1,12 @@
-use std::{sync::Arc, time::SystemTime};
+use std::time::SystemTime;
 
-use anyhow::Context;
-use axum::Json;
-use diesel::{query_dsl::methods::FilterDsl, ExpressionMethods};
-use diesel_async::{scoped_futures::ScopedFutureExt, RunQueryDsl};
-use log::error;
-use tokio::spawn;
+use super::prelude::*;
 
-use crate::{client::*, error::*, state::*, *};
 use bilibili::app::archive::v1::Arc as Archive;
 
+/// Returns AppResult<Resp<db::Segment>>
+///
+/// See also: [db::Segment]
 pub async fn segment_create(
   state: AppState,
   ip: SecureClientIp,

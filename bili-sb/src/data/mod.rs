@@ -6,6 +6,7 @@ mod abv;
 mod common;
 
 pub use crate::data::abv::*;
+use crate::db;
 pub use common::*;
 use uuid::Uuid;
 
@@ -36,4 +37,24 @@ pub struct CreateSegmentReq {
   pub abv: Abv,
   pub cid: NonZeroU64,
   pub submitter: Uuid,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(untagged)]
+pub enum ListSegmentReq {
+  /// aid or bvid, lookup related cids for video
+  Abv {
+    #[serde(flatten)]
+    abv: Abv,
+  },
+  /// single cid
+  Cid { cid: NonZeroU64 },
+  /// batch cids
+  Cids { cids: Vec<NonZeroU64> },
+}
+
+#[derive(Serialize, Debug, Clone)]
+pub struct ListSegmentData {
+  pub len: usize,
+  pub segments: Vec<db::Segment>,
 }
