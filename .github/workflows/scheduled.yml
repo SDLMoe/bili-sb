@@ -1,8 +1,11 @@
-name: outdated
+name: Scheduled CI
 
 on:
   workflow_dispatch:
   schedule: [cron: "35 13 * * *"]
+
+permissions:
+  contents: read
 
 jobs:
   outdated:
@@ -13,3 +16,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/install@cargo-outdated
       - run: cargo outdated --workspace --exit-code 1
+
+  security_audit:
+    name: cargo audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: rustsec/audit-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}

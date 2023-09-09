@@ -1,6 +1,7 @@
-name: Lint
+name: CI
 
 on:
+  workflow_dispatch:
   push:
     branches: [master]
     paths:
@@ -19,6 +20,9 @@ on:
       - "**.lock"
       - ".github/workflows/*.yml"
 
+permissions:
+  contents: read
+
 env:
   CARGO_TERM_COLOR: always
   RUSTFLAGS: -D warnings
@@ -33,7 +37,6 @@ jobs:
     if: needs.pre_ci.outputs.continue
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    continue-on-error: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -51,3 +54,15 @@ jobs:
         run: cargo fmt --all -- --check
       - name: Run Clippy
         run: cargo clippy --all -- -D warnings
+
+  security_audit:
+    name: cargo audit
+    needs: pre_ci
+    if: needs.pre_ci.outputs.continue
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: rustsec/audit-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
