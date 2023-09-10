@@ -4,7 +4,7 @@ use diesel::pg::Pg;
 use diesel::prelude::*;
 use diesel_derive_enum::DbEnum;
 use ipnet::IpNet;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 #[rustfmt::skip]
@@ -62,20 +62,29 @@ pub struct Segment {
   pub cid: i64,
   pub start: f32,
   pub end: f32,
+  #[serde(with = "humantime_serde")]
+  pub time: SystemTime,
   #[serde(skip)]
   pub submitter: Uuid,
   #[serde(skip)]
   pub submitter_ip: IpNet,
 }
 
-#[derive(Clone, Copy, Debug, DbEnum)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, DbEnum)]
 #[ExistingTypePath = "schema::sql_types::VoteType"]
+#[serde(rename_all = "snake_case")]
 pub enum VoteType {
   Up,
   Down,
 }
 
-#[derive(Clone, Debug, Insertable, Queryable, Selectable)]
+impl Default for VoteType {
+  fn default() -> Self {
+    Self::Up
+  }
+}
+
+#[derive(Clone, Debug, Insertable, Queryable, Selectable, AsChangeset)]
 #[diesel(table_name = votes)]
 #[diesel(check_for_backend(Pg))]
 pub struct Vote {
@@ -83,4 +92,5 @@ pub struct Vote {
   pub type_: VoteType,
   pub voter: Uuid,
   pub voter_ip: IpNet,
+  pub time: SystemTime,
 }

@@ -1,8 +1,28 @@
-use std::mem::transmute;
+use std::{mem::transmute, num::NonZeroU64};
 
 use diesel::SelectableHelper;
 
 use super::prelude::*;
+
+#[derive(Deserialize, Debug)]
+#[serde(untagged)]
+pub enum ListSegmentReq {
+  /// aid or bvid, lookup related cids for video
+  Abv {
+    #[serde(flatten)]
+    abv: Abv,
+  },
+  /// single cid
+  Cid { cid: NonZeroU64 },
+  /// batch cids
+  Cids { cids: Vec<NonZeroU64> },
+}
+
+#[derive(Serialize, Debug, Clone)]
+pub struct ListSegmentData {
+  pub len: usize,
+  pub segments: Vec<db::Segment>,
+}
 
 pub async fn segment_list(
   state: AppState,

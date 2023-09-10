@@ -31,8 +31,9 @@ CREATE TABLE segments (
   cid       BIGINT NOT NULL REFERENCES video_parts(cid),
   "start"   REAL   NOT NULL,
   "end"     REAL   NOT NULL,
-  submitter    UUID   NOT NULL REFERENCES users(id),
-  submitter_ip CIDR NOT NULL,
+  submitter    UUID      NOT NULL REFERENCES users(id),
+  submitter_ip CIDR      NOT NULL,
+  "time"       TIMESTAMP NOT NULL,
 
   CHECK("start" < "end")
 );
@@ -44,6 +45,7 @@ CREATE TABLE votes (
   voter      UUID      NOT NULL REFERENCES users(id),
   "type"     vote_type NOT NULL,
   voter_ip   CIDR      NOT NULL,
+  "time"     TIMESTAMP NOT NULL,
 
   PRIMARY KEY (segment, voter)
 )

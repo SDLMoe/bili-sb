@@ -10,12 +10,11 @@ use axum::{
 use axum_client_ip::SecureClientIp;
 
 use clap::Parser;
-use diesel_async::RunQueryDsl;
 use http::{Method, Request, StatusCode};
 use indoc::concatdoc;
 use log::info;
 use rand::RngCore;
-use tokio::{spawn, time::sleep};
+use tokio::time::sleep;
 use tower_http::compression::CompressionLayer;
 use uuid::Uuid;
 
@@ -97,6 +96,7 @@ async fn main() -> anyhow::Result<()> {
     .route("/user/create", post(user_create))
     .route("/segment/create", post(segment_create))
     .route("/segment/list", get(segment_list))
+    .route("/segment/vote", post(segment_vote))
     .fallback(fallback)
     .with_state(Arc::clone(&state))
     .layer(CompressionLayer::new())
@@ -134,61 +134,4 @@ async fn fallback(request: Request<Body>) -> Response {
   } else {
     (resp_code, "Fatal: No router for such path").into_response()
   }
-}
-
-async fn user_create(state: AppState, ip: SecureClientIp) -> AppResult<Resp<CreateUserData>> {
-  let mut con = state.db_con().await?;
-  let user = db::User::new(ip.0.into());
-  let result = diesel::insert_into(db::users::table)
-    .values(&user)
-    .execute(&mut con)
-    .await
-    .context_into_app("Failed to insert")?;
-
-  if result != 1 {
-    return Err(app_err!(RespCode::DATABASE_ERROR, "Database insert failed"));
-  }
-
-  Ok(CreateUserData { uuid: user.id }.into())
-}
-
-async fn pow_choose(state: AppState) -> AppResult<Resp<PowProblemData>> {
-  let config = &state.config.pow;
-  if !config.enabled {
-    let data = PowProblemData {
-      enabled: false,
-      ..Default::default()
-    };
-    return Ok(data.into());
-  }
-
-  let mut salt = vec![0; config.salt_size.get()];
-  let cost = config.cost;
-  let timestamp = blake3_pow::epoch_sec();
-  rand::thread_rng().fill_bytes(&mut salt);
-
-  let uuid = Uuid::new_v4();
-  let data = PowProblemData {
-    enabled: true,
-    salt: Some(base64_simd::STANDARD.encode_to_string(&salt)),
-    cost: Some(cost),
-    timestamp: Some(timestamp),
-    uuid: Some(uuid),
-  };
-
-  state.pow_map.insert(
-    uuid,
-    PowProperty {
-      salt,
-      cost,
-      timestamp,
-    },
-  );
-
-  spawn(async move {
-    sleep(Duration::from_secs(60)).await;
-    state.pow_map.remove(&uuid);
-  });
-
-  Ok(data.into())
 }

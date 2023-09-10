@@ -27,6 +27,7 @@ dotenvy = { version = "0.15.7", optional = true }
 governor = "0.6.0"
 html-escape = "0.2.13"
 http = "0.2.9"
+humantime-serde = "1.1.1"
 indoc = "2.0.3"
 ipnet = "2.8.0"
 log = "0.4.20"

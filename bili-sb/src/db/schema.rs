@@ -14,6 +14,7 @@ diesel::table! {
         end -> Float4,
         submitter -> Uuid,
         submitter_ip -> Cidr,
+        time -> Timestamp,
     }
 }
 
@@ -56,6 +57,7 @@ diesel::table! {
         #[sql_name = "type"]
         type_ -> VoteType,
         voter_ip -> Cidr,
+        time -> Timestamp,
     }
 }
 

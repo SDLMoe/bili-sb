@@ -1,8 +1,18 @@
-use std::time::SystemTime;
+use std::{num::NonZeroU64, time::SystemTime};
 
 use super::prelude::*;
 
 use bilibili::app::archive::v1::Arc as Archive;
+
+#[derive(Deserialize, Debug)]
+pub struct CreateSegmentReq {
+  pub start: f32,
+  pub end: f32,
+  #[serde(flatten)]
+  pub abv: Abv,
+  pub cid: NonZeroU64,
+  pub submitter: Uuid,
+}
 
 /// Returns AppResult<Resp<db::Segment>>
 ///
@@ -15,11 +25,25 @@ pub async fn segment_create(
   let bili = state.bili().await?;
   let mut view = pb_client!(bili, ViewClient);
   let mut db_con: PooledPgCon = state.db_con_owned().await?;
-  let users: Vec<db::User> = db::users::table
+
+  let user: db::User = match db::users::table
     .filter(db::users::id.eq(body.submitter))
-    .load(&mut db_con)
+    .first(&mut db_con)
     .await
-    .context_into_app("Failed to fetch user")?;
+  {
+    Ok(user) => user,
+    Err(error) => match error {
+      diesel::result::Error::NotFound => {
+        return Err(app_err_custom!(
+          StatusCode::UNPROCESSABLE_ENTITY,
+          RespCode::INVALID_PARAMS,
+          "No such user, uuid = {}",
+          body.submitter
+        ))
+      },
+      err => Err(err).context_into_app("Failed to fetch user")?,
+    },
+  };
 
   if body.start > body.end {
     return Err(app_err_custom!(
@@ -28,15 +52,6 @@ pub async fn segment_create(
       "segment start is larger than end, {} > {}",
       body.start,
       body.end
-    ));
-  };
-
-  let Some(user) = users.get(0).cloned() else {
-    return Err(app_err_custom!(
-      StatusCode::UNPROCESSABLE_ENTITY,
-      RespCode::INVALID_PARAMS,
-      "Invalid user uuid `{}`",
-      body.submitter
     ));
   };
 
@@ -102,6 +117,7 @@ pub async fn segment_create(
 
   let new_user = db::User {
     last_operation_time: Some(SystemTime::now()),
+    last_operation_ip: Some(ip.0.into()),
     ..user.clone()
   };
 
@@ -112,6 +128,7 @@ pub async fn segment_create(
     end: body.end,
     submitter: user.id,
     submitter_ip: ip.0.into(),
+    time: SystemTime::now(),
   });
 
   let db_segment = Arc::clone(&segment);
