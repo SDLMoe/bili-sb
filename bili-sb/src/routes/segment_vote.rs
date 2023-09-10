@@ -1,9 +1,5 @@
 use std::time::SystemTime;
 
-use diesel::BoolExpressionMethods;
-
-use crate::db::VoteType;
-
 use super::prelude::*;
 
 #[derive(Deserialize, Debug)]
@@ -77,25 +73,11 @@ pub async fn segment_vote(
     .await
     .with_context_into_app(|| format!("Failed to upsert votes, request: {:?}", &body.0))?;
 
-  let up_votes: i64 = db::votes::table
-    .filter(
-      db::votes::segment
-        .eq(body.id)
-        .and(db::votes::type_.eq(VoteType::Up)),
-    )
-    .count()
-    .get_result(&mut db_con)
+  let up_votes: i64 = db::count_votes(&mut db_con, body.id, db::VoteType::Up)
     .await
     .with_context_into_app(|| format!("Failed to get up vote count for request: {:?}", &body.0))?;
 
-  let down_votes: i64 = db::votes::table
-    .filter(
-      db::votes::segment
-        .eq(body.id)
-        .and(db::votes::type_.eq(VoteType::Down)),
-    )
-    .count()
-    .get_result(&mut db_con)
+  let down_votes = db::count_votes(&mut db_con, body.id, db::VoteType::Down)
     .await
     .with_context_into_app(|| {
       format!("Failed to get down vote count for request: {:?}", &body.0)

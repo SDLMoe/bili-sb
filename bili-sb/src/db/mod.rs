@@ -1,7 +1,11 @@
 use std::time::SystemTime;
 
-use diesel::pg::Pg;
-use diesel::prelude::*;
+use diesel::{
+  pg::Pg, AsChangeset, BoolExpressionMethods, ExpressionMethods, Insertable, QueryDsl, Queryable,
+  Selectable,
+};
+use diesel_async::RunQueryDsl;
+
 use diesel_derive_enum::DbEnum;
 use ipnet::IpNet;
 use serde::{Deserialize, Serialize};
@@ -11,6 +15,8 @@ use uuid::Uuid;
 mod schema;
 
 pub use schema::*;
+
+use crate::state::PooledPgCon;
 
 #[derive(Debug, Insertable, Queryable, Selectable, AsChangeset)]
 #[diesel(table_name = videos)]
@@ -70,6 +76,18 @@ pub struct Segment {
   pub submitter_ip: IpNet,
 }
 
+#[derive(Serialize, Clone, Debug, Queryable)]
+pub struct SegmentWithVote {
+  pub id: Uuid,
+  pub cid: i64,
+  pub start: f32,
+  pub end: f32,
+  #[serde(with = "humantime_serde")]
+  pub time: SystemTime,
+  pub up_vote: Option<i64>,
+  pub down_vote: Option<i64>,
+}
+
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, DbEnum)]
 #[ExistingTypePath = "schema::sql_types::VoteType"]
 #[serde(rename_all = "snake_case")]
@@ -93,4 +111,89 @@ pub struct Vote {
   pub voter: Uuid,
   pub voter_ip: IpNet,
   pub time: SystemTime,
+}
+
+pub async fn count_votes(
+  con: &mut PooledPgCon<'_>,
+  segment: Uuid,
+  vote_type: VoteType,
+) -> diesel::QueryResult<i64> {
+  votes::table
+    .filter(votes::segment.eq(segment).and(votes::type_.eq(vote_type)))
+    .count()
+    .get_result(con)
+    .await
+}
+
+macro_rules! vote_query {
+  ($vote_type:expr) => {
+    votes::table
+      .filter(
+        votes::segment
+          .eq(segments::id)
+          .and(votes::type_.eq($vote_type)),
+      )
+      .count()
+      .single_value()
+  };
+}
+
+pub async fn segments_related_to_aid(
+  con: &mut PooledPgCon<'_>,
+  aid: i64,
+) -> diesel::QueryResult<Vec<SegmentWithVote>> {
+  videos::table
+    .inner_join(video_parts::table.inner_join(segments::table))
+    .select((
+      segments::id,
+      segments::cid,
+      segments::start,
+      segments::end,
+      segments::time,
+      vote_query!(VoteType::Up),
+      vote_query!(VoteType::Down),
+    ))
+    .filter(videos::aid.eq(aid))
+    .get_results::<SegmentWithVote>(con)
+    .await
+}
+
+pub async fn segments_related_to_cid(
+  con: &mut PooledPgCon<'_>,
+  cid: i64,
+) -> diesel::QueryResult<Vec<SegmentWithVote>> {
+  video_parts::table
+    .inner_join(segments::table)
+    .select((
+      segments::id,
+      segments::cid,
+      segments::start,
+      segments::end,
+      segments::time,
+      vote_query!(VoteType::Up),
+      vote_query!(VoteType::Down),
+    ))
+    .filter(video_parts::aid.eq(cid))
+    .get_results::<SegmentWithVote>(con)
+    .await
+}
+
+pub async fn segments_related_to_cids(
+  con: &mut PooledPgCon<'_>,
+  cids: &[i64],
+) -> diesel::QueryResult<Vec<SegmentWithVote>> {
+  video_parts::table
+    .inner_join(segments::table)
+    .select((
+      segments::id,
+      segments::cid,
+      segments::start,
+      segments::end,
+      segments::time,
+      vote_query!(VoteType::Up),
+      vote_query!(VoteType::Down),
+    ))
+    .filter(video_parts::aid.eq_any(cids))
+    .get_results::<SegmentWithVote>(con)
+    .await
 }

@@ -14,7 +14,7 @@ pub use user_create::*;
 mod prelude {
   pub use anyhow::Context;
   pub use axum::Json;
-  pub use diesel::{ExpressionMethods, QueryDsl};
+  pub use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl};
   pub use diesel_async::{scoped_futures::ScopedFutureExt, RunQueryDsl};
   pub use log::{debug, error, info, warn};
   pub use serde::{Deserialize, Serialize};
