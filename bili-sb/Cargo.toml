@@ -18,7 +18,7 @@ base64-simd = "0.8.0"
 bb8 = "0.8.1"
 bili-proto = { path = "../bili-proto" }
 blake3-pow = { path = "../blake3-pow" }
-clap = { version = "4.4.1", features = ["derive", "cargo", "env"] }
+clap = { version = "4.4.3", features = ["derive", "cargo", "env"] }
 dashmap = "5.5.1"
 diesel = { version = "2.1.1", features = ["ipnet-address", "uuid"] }
 diesel-async = { version = "0.4.1", features = ["postgres", "bb8"] }
@@ -40,7 +40,7 @@ serde = { version = "1.0.183", features = ["derive"] }
 serde_json = "1.0.105"
 thiserror = "1.0.47"
 tokio = { version = "1.32", features = ["full"] }
-toml = "0.7"
+toml = "0.8"
 tonic = { version = "0.10.0", features = ["tls-webpki-roots", "gzip"] }
 tower = { version = "0.4.13" }
 tower-http = { version = "0.4.3", features = ["compression-full"] }
