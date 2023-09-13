@@ -8,7 +8,6 @@ use axum::{
   Router,
 };
 use axum_client_ip::SecureClientIp;
-
 use clap::Parser;
 use http::{Method, Request, StatusCode};
 use indoc::concatdoc;
@@ -41,7 +40,7 @@ async fn main() -> anyhow::Result<()> {
     #[cfg(not(feature = "dev"))]
     std::env::set_var(LOG_ENV, "info");
     #[cfg(feature = "dev")]
-    std::env::set_var(LOG_ENV, "debug");
+    std::env::set_var(LOG_ENV, "warn");
   }
 
   pretty_env_logger::try_init_custom_env(LOG_ENV).context("Failed to init bili-sb logger")?;

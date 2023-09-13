@@ -3,7 +3,10 @@ use std::{hash::BuildHasherDefault, sync::Arc, time::Duration};
 use anyhow::Context;
 use axum::extract::State;
 use dashmap::DashMap;
-use diesel_async::{pooled_connection::AsyncDieselConnectionManager, AsyncPgConnection};
+use diesel_async::{
+  pooled_connection::{AsyncDieselConnectionManager, PoolableConnection, RecyclingMethod},
+  AsyncPgConnection,
+};
 use http::Uri;
 use log::info;
 use tokio::sync::OnceCell;
@@ -46,6 +49,15 @@ impl App {
       .build(db_config)
       .await
       .with_context(|| format!("Failed to connect database, url: `{}`", database_url))?;
+
+    // early check for database connection
+    pool
+      .get()
+      .await
+      .context("Unable to get a instance from connection pool")?
+      .ping(&RecyclingMethod::Verified)
+      .await
+      .with_context(|| format!("Failed to ping database, url: `{}`", database_url))?;
 
     Ok(Self {
       bili_channel: Default::default(),
