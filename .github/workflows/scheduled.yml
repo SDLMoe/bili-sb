@@ -2,7 +2,7 @@ name: Scheduled CI
 
 on:
   workflow_dispatch:
-  schedule: [cron: "35 13 * * *"]
+  schedule: [cron: "35 13 * * 1"]
 
 permissions:
   contents: read
