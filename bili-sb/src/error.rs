@@ -287,7 +287,7 @@ pub fn error_html(uri: Option<&Uri>, code: StatusCode, extra_msg: &str) -> Html<
         path = uri.path()
       }
     })
-    .unwrap_or_else(|| "".to_string());
+    .unwrap_or_default();
 
   Html(formatdoc! {
     r##"
